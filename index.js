@@ -5,7 +5,7 @@ if (process.env.NODE_ENV !== 'production') {
 //express library setup
 const express = require('express');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 //expresss form handling
 app.use(express.urlencoded({ extended: true }));
@@ -184,4 +184,4 @@ app.use((err, req, res, next) => {
 })
 
 //port connection
-app.listen(port, () => console.log('Listening on port 3000'));
+app.listen(port, () => console.log(`Listening on port ${port}`));
