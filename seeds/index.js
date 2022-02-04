@@ -41,16 +41,32 @@ const sample = (array) => array[Math.floor(Math.random() * array.length)];
 //2- create 50 new isntances of campground and store them in the now empty mongoDB
 const seedDB = async () => {
     await Campground.deleteMany({});
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 200; i++) {
         const random1000 = Math.floor(Math.random() * 1000);
         const price = Math.floor(Math.random() * 20) + 10;
         const camp = new Campground({
             author: '61e5f2b32cfec1adf5ad4ab2',
             title: `${sample(descriptors)} ${sample(places)}`,
             price,
+            geometry: { 
+                type: "Point", 
+                coordinates: [
+                    cities[random1000].longitude, 
+                    cities[random1000].latitude
+                ] 
+            },
             description: 'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nesciunt saepe voluptatum iure, molestias, pariatur explicabo fugit reprehenderit nostrum voluptas repudiandae blanditiis. Incidunt, architecto provident quod itaque rem voluptas corrupti adipisci?',
             location: `${cities[random1000].city}, ${cities[random1000].state}`,
-            image: await getUnsplashImgURL()
+            images: [
+                {
+                    url: 'https://res.cloudinary.com/dmlopez5505501/image/upload/v1643606709/YelpCamp/lmuljtojiy9qcfmxjdri.jpg',
+                    filename: 'YelpCamp/lmuljtojiy9qcfmxjdri'
+                },
+                {
+                    url: 'https://res.cloudinary.com/dmlopez5505501/image/upload/v1643606709/YelpCamp/mc5vq5krhfobweidj3nw.jpg',
+                    filename: 'YelpCamp/mc5vq5krhfobweidj3nw'
+                }
+            ]
         });
         await camp.save();
     }

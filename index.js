@@ -30,19 +30,39 @@ app.engine('ejs', ejsMate);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+
 //Express Session configuration
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const dbUrl = process.env.DB_URL || 'mongodb://localhost:27017/yelp-camp';
+const secret = process.env.SECRET || 'secretCode'
+// const MongoDBStore = require('connect-mongo')(session);
+
+const store = new MongoStore({
+    mongoUrl: dbUrl,
+    secret,
+    touchAfter: 24 * 60 * 60
+})
+
+store.on("error", error => {
+    console.log("Session Store Error.", error)
+})
+
 const sessionConfig = {
-    secret: 'secretCode',
+    store, //MongoDB storage
+    name: 'session',
+    secret,
     resave: false,
     saveUninitialized: true,
     cookie: {
         httpOnly: true, //added security
+        // secure: true, only works through https. 
         expires: Date.now() + 10000 * 60 * 60 * 24 * 7, // Expire from current date + 7 weeks
         maxAge: 10000 * 60 * 60 * 24 * 7 //7 weeks
     }
 }
 app.use(session(sessionConfig));
+
 
 const flash = require('connect-flash');
 app.use(flash());
@@ -50,7 +70,8 @@ app.use(flash());
 //mongoose setup
 const mongoose = require('mongoose');
 async function connectMongoDB() {
-    await mongoose.connect('mongodb://localhost:27017/yelp-camp')
+    //'mongodb://localhost:27017/yelp-camp'  <-- Local Host
+    await mongoose.connect(dbUrl)
 }
 
 connectMongoDB();
@@ -71,6 +92,60 @@ app.use(passport.session()); //will mantain persistent login sessions throughout
 passport.use(new localStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser()); //Passport's way to serialize a user. Store a user in the session
 passport.deserializeUser(User.deserializeUser()); //Passport's way to get a user out of that session
+
+//Security
+const mongoSanitize = require('express-mongo-sanitize');
+const helmet = require('helmet');
+app.use(mongoSanitize());
+app.use(helmet());
+
+const scriptSrcUrls = [
+    "https://stackpath.bootstrapcdn.com/",
+    "https://api.tiles.mapbox.com/",
+    "https://api.mapbox.com/",
+    "https://kit.fontawesome.com/",
+    "https://cdnjs.cloudflare.com/",
+    "https://cdn.jsdelivr.net",
+];
+const styleSrcUrls = [
+    "https://kit-free.fontawesome.com/",
+    "https://stackpath.bootstrapcdn.com/",
+    "https://cdn.jsdelivr.net",
+    "https://api.mapbox.com/",
+    "https://api.tiles.mapbox.com/",
+    "https://fonts.googleapis.com/",
+    "https://use.fontawesome.com/",
+];
+const connectSrcUrls = [
+    "https://cdn.jsdelivr.net",
+    "https://api.mapbox.com/",
+    "https://a.tiles.mapbox.com/",
+    "https://b.tiles.mapbox.com/",
+    "https://events.mapbox.com/",
+];
+const fontSrcUrls = [];
+
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            defaultSrc: [],
+            connectSrc: ["'self'", ...connectSrcUrls],
+            scriptSrc: ["'unsafe-inline'", "'self'", ...scriptSrcUrls],
+            styleSrc: ["'self'", "'unsafe-inline'", ...styleSrcUrls],
+            workerSrc: ["'self'", "blob:"],
+            objectSrc: [],
+            imgSrc: [
+                "'self'",
+                "blob:",
+                "data:",
+                "https://res.cloudinary.com/dmlopez5505501/", //SHOULD MATCH YOUR CLOUDINARY ACCOUNT! 
+                "https://images.unsplash.com/",
+            ],
+            fontSrc: ["'self'", ...fontSrcUrls],
+        },
+    })
+);
+
 
 //MIDDLEWARE
 app.use((req, res, next) => {
@@ -94,6 +169,10 @@ app.use('/campgrounds/:id/reviews', reviewsRoutes);
 const usersRoutes = require('./routes/users');
 const catchAsync = require('./utilities/catchAsync');
 app.use('/', usersRoutes);
+//HOME PAGE
+app.get('/', (req, res) => {
+    res.render('HOME')
+});
 
 //Error Handlers
 //if no other Route Handler runs, the code will hit this code where '*' means for ALL routes
@@ -109,4 +188,4 @@ app.use((err, req, res, next) => {
 })
 
 //port connection
-app.listen(port, () => console.log('Connected on port 3000'));
+app.listen(port, () => console.log('Listening on port 3000'));
