@@ -167,7 +167,7 @@ const catchAsync = require('./utilities/catchAsync');
 app.use('/', usersRoutes);
 //HOME PAGE
 app.get('/', (req, res) => {
-    res.render('HOME')
+    res.render('home')
 });
 
 //Error Handlers
